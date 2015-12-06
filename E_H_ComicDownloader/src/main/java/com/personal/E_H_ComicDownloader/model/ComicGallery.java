@@ -17,12 +17,14 @@ public class ComicGallery implements Runnable {
 	private static final Logger log = LoggerFactory.getLogger(MainApp.class);
 
 	private String galleryURL;
+	private String file_path;
 	
 	private ExecutorService executor;
 	
-	public ComicGallery(String galleryURL, ExecutorService executor) {
+	public ComicGallery(String galleryURL, String file_path, ExecutorService executor) {
 		super();
 		this.galleryURL = galleryURL;
+		this.file_path = file_path;
 		this.executor = executor;
 	}
 
@@ -33,7 +35,7 @@ public class ComicGallery implements Runnable {
 			Document doc = Jsoup.connect(galleryURL).get();
 			Elements divs = doc.select("div[class=it5]");
 			for(Element div : divs){
-				executor.submit(new ComicTracker(div.select("a").attr("href"), div.select("a").text()));
+				executor.submit(new ComicTracker(div.select("a").attr("href"), file_path + "/" + div.select("a").text()));
 //				log.debug(div.select("a").text());
 			}
 		} catch (IOException e) {

@@ -23,6 +23,9 @@ public class ComicTracker implements Runnable {
 
 	private static final Logger log = LoggerFactory.getLogger(MainApp.class);
 
+	private static final String DOWNLOADING_FILE_NAME = "DOWNLOADING";
+	private static final String FAIL_LIST_FILE_NAME = "failList.txt";
+
 	private static final int PAGE_IMAGE_MAX = 40;
 
 	private String comicURL;
@@ -90,11 +93,13 @@ public class ComicTracker implements Runnable {
 				comicPageScanner(String.format(templateURL, index - 1));
 			}
 
+			writeDownloadingFile();
+			
 			for (String imageURL : imageURLs) {
 				File destination = new File(comicTitle + "/" + String.format("%03d.jpg", ++imageNum));
-				if(!destination.exists()){
+				if (!destination.exists()) {
 					executor.submit(new ImageDownloader(imageURL, destination, this));
-				}else{
+				} else {
 					succeed();
 				}
 			}
@@ -123,6 +128,7 @@ public class ComicTracker implements Runnable {
 		log.debug(comicTitle + " : " + (String.format("%.1f%%", (double) finish / imageNum * 100)));
 		if (finish == imageNum) {
 			log.debug(comicTitle + " complete...");
+			deleteDownloadingFile();
 			if (failList.size() > 0) {
 				log.debug(comicTitle + " failList : " + failList.size());
 				writeFailList();
@@ -149,12 +155,27 @@ public class ComicTracker implements Runnable {
 		}
 	}
 
+	private void writeDownloadingFile() {
+		try {
+			File DownloadingListFile = new File(comicTitle + "/" + DOWNLOADING_FILE_NAME);
+			DownloadingListFile.createNewFile();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	private void deleteDownloadingFile() {
+		File DownloadingListFile = new File(comicTitle + "/" + DOWNLOADING_FILE_NAME);
+		DownloadingListFile.delete();
+	}
+
 	private void writeFailList() {
 		try {
-			File failListFile = new File(comicTitle + "/failList.txt");
+			File failListFile = new File(comicTitle + "/" + FAIL_LIST_FILE_NAME);
 			FileWriter fw = new FileWriter(failListFile);
 			for (String failURL : failList) {
-				fw.write(failURL + "\n");
+				fw.write(failURL + "\r\n");
 			}
 			fw.flush();
 			fw.close();

@@ -44,7 +44,7 @@ public class ComicGalleriesTracker implements Runnable {
 		String url1 = "http://g.e-hentai.org/?f_doujinshi=0&f_manga=1&f_artistcg=0&f_gamecg=0&f_western=0&f_non-h=0&f_imageset=0&f_cosplay=0&f_asianporn=0&f_misc=0&f_search=sea&f_apply=Apply+Filter";
 		String url2 = "http://g.e-hentai.org/?page=1&f_manga=on&f_search=%E6%BC%A2%E5%8C%96&f_apply=Apply+Filter";
 		String url3 = "http://g.e-hentai.org/manga/0";
-		executor.submit(new ComicGalleriesTracker(url3, 1, executor));
+		executor.submit(new ComicGalleriesTracker(url2, 1, executor));
 		try {
 			executor.awaitTermination(1000, TimeUnit.MINUTES);
 		} catch (InterruptedException e) {
@@ -96,7 +96,7 @@ public class ComicGalleriesTracker implements Runnable {
 				return;
 
 			for (int index = currentPageNum; index <= maxPageNum; index++) {
-				executor.submit(new ComicGallery(String.format(templateURL, index - 1).replace("\\u", "%"), executor));
+				executor.submit(new ComicGallery(String.format(templateURL, index - 1).replace("\\u", "%"), "漢化", executor));
 			}
 			
 //			executor.shutdown();

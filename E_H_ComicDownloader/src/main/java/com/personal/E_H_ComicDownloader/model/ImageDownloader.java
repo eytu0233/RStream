@@ -34,7 +34,7 @@ public class ImageDownloader implements Runnable {
 	public void run() {
 		// TODO Auto-generated method stub
 		int tryTry = 3;
-		int timeout = 5000;
+		int timeout = 2000;
 
 		try {
 			Document doc = Jsoup.connect(pageURL).get();
@@ -62,7 +62,7 @@ public class ImageDownloader implements Runnable {
 			}
 
 		} catch (SocketTimeoutException e) {
-			e.printStackTrace();
+			log.debug(pageURL + "time out");
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
