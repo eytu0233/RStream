@@ -13,18 +13,19 @@ import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.personal.E_H_ComicDownloader.ComicDownloadTask;
 import com.personal.E_H_ComicDownloader.MainApp;
 
 public class ImageDownloader implements Runnable {
 
 	private static final Logger log = LoggerFactory.getLogger(MainApp.class);
 
-	private ComicTracker comic;
+	private ComicDownloadTask comic;
 
 	private String pageURL;
 	private File destination;
 
-	public ImageDownloader(String pageURL, File destination, ComicTracker comic) {
+	public ImageDownloader(String pageURL, File destination, ComicDownloadTask comic) {
 		// TODO Auto-generated constructor stub
 		this.pageURL = pageURL;
 		this.destination = destination;

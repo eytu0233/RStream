@@ -1,4 +1,4 @@
-package com.personal.E_H_ComicDownloader.model;
+package com.personal.E_H_ComicDownloader;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -17,26 +17,23 @@ import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.personal.E_H_ComicDownloader.MainApp;
+import com.personal.E_H_ComicDownloader.model.ComicGallery;
+import com.personal.E_H_ComicDownloader.model.ImageDownloader;
 
-public class ComicTracker implements Runnable {
+import javafx.application.Platform;
+import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.StringProperty;
+import javafx.concurrent.Task;
+import javafx.scene.control.ProgressIndicator;
 
+public class ComicDownloadTask extends Task<Void>{
+	
 	private static final Logger log = LoggerFactory.getLogger(MainApp.class);
-
-	private static final String DOWNLOADING_FILE_NAME = "DOWNLOADING";
+	
 	private static final String FAIL_LIST_FILE_NAME = "failList.txt";
 
 	private static final int PAGE_IMAGE_MAX = 40;
-
-	private String comicURL;
-	private String comicTitle;
-
-	private int finish = 0;
-	private int imageNum;
-
-	private LinkedList<String> imageURLs = new LinkedList<String>();
-	private LinkedList<String> failList = new LinkedList<String>();
-
+	
 	private static ExecutorService executor = Executors.newScheduledThreadPool(3, new ThreadFactory() {
 		public Thread newThread(Runnable r) {
 			Thread t = new Thread(r);
@@ -44,23 +41,40 @@ public class ComicTracker implements Runnable {
 			return t;
 		}
 	});
+	
+	private ComicGallery comicGallery;
 
-	public ComicTracker(String comicURL, String comicTitle) {
-		super();
-		this.comicURL = comicURL;
-		this.comicTitle = comicTitle.replaceAll("[/|\\?]", "");
+	private StringProperty comicName;
+	private StringProperty url;
+	
+	private int finish = 0;
+	private int imageNum;
+	
+	private LinkedList<String> imageURLs = new LinkedList<String>();
+	private LinkedList<String> failList = new LinkedList<String>();
+
+	
+	public ComicDownloadTask(String url, String comicName, ComicGallery comicGallery){
+		this.comicName = new SimpleStringProperty(comicName);
+		this.url = new SimpleStringProperty(url);
+		this.comicGallery = comicGallery;
+		
+		updateProgress(ProgressIndicator.INDETERMINATE_PROGRESS, 1);
+		updateMessage("等待排程");
 	}
-
-	public void run() {
+	
+	@Override
+	protected Void call() throws Exception {
 		// TODO Auto-generated method stub
+		
+		this.updateMessage("下載中");
+		
 		Pattern p = Pattern.compile("Showing (\\d+) - (\\d+) of (\\d+) images");
 		int currentPageNum = 1, maxPageNum = 1;
 		String templateURL = null;
 
-		log.debug(comicTitle);
-
 		try {
-			Document doc = Jsoup.connect(comicURL).get();
+			Document doc = Jsoup.connect(url.get()).get();
 			/* 從頁面找出漫畫當前頁數跟最大頁數 */
 			Elements itemNum = doc.select("p[class=gpc]");
 			for (Element e : itemNum) {
@@ -85,20 +99,18 @@ public class ComicTracker implements Runnable {
 			}
 
 			if (templateURL == null || templateURL.isEmpty()) {
-				templateURL = comicURL + "?p=%d";
+				templateURL = url.get() + "?p=%d";
 			}
 			// log.debug("templateURL : " + templateURL);
 
 			for (int index = currentPageNum; index <= maxPageNum; index++) {
 				comicPageScanner(String.format(templateURL, index - 1));
 			}
-
-			writeDownloadingFile();
 			
 			for (String imageURL : imageURLs) {
-				File destination = new File(comicTitle + "/" + String.format("%03d.jpg", ++imageNum));
+				File destination = new File(comicName.get() + "/" + String.format("%03d.jpg", ++imageNum));
 				if (!destination.exists()) {
-					executor.submit(new ImageDownloader(imageURL, destination, this));
+					executor.submit(new ImageDownloader(url.get(), destination, this));
 				} else {
 					succeed();
 				}
@@ -111,7 +123,24 @@ public class ComicTracker implements Runnable {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		
+		return null;
 	}
+
+	public StringProperty getComicNameProperty() {
+		// TODO Auto-generated method stub
+		if (comicName == null)
+			this.comicName = new SimpleStringProperty(this, "comicName");
+		return comicName;
+	}
+
+	public StringProperty getUrlProperty() {
+		// TODO Auto-generated method stub
+		if (url == null)
+			this.url = new SimpleStringProperty(this, "url");
+		return url;
+	}
+	
 
 	public synchronized void succeed() {
 		finish++;
@@ -124,13 +153,15 @@ public class ComicTracker implements Runnable {
 		showProgress();
 	}
 
-	private void showProgress() {
-		log.debug(comicTitle + " : " + (String.format("%.1f%%", (double) finish / imageNum * 100)));
+	private synchronized void showProgress() {
+		log.debug(comicName.get() + " : " + (String.format("%.1f%%", (double) finish / imageNum * 100)));
+		Platform.runLater(()->updateProgress((double) finish / imageNum, 1));
 		if (finish == imageNum) {
-			log.debug(comicTitle + " complete...");
-			deleteDownloadingFile();
+			log.debug(comicName.get() + " complete...");
+			comicGallery.finish();
+			Platform.runLater(()->this.updateMessage("下載完成"));
 			if (failList.size() > 0) {
-				log.debug(comicTitle + " failList : " + failList.size());
+				log.debug(comicName.get() + " failList : " + failList.size());
 				writeFailList();
 			}
 		}
@@ -155,24 +186,9 @@ public class ComicTracker implements Runnable {
 		}
 	}
 
-	private void writeDownloadingFile() {
-		try {
-			File DownloadingListFile = new File(comicTitle + "/" + DOWNLOADING_FILE_NAME);
-			DownloadingListFile.createNewFile();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-
-	private void deleteDownloadingFile() {
-		File DownloadingListFile = new File(comicTitle + "/" + DOWNLOADING_FILE_NAME);
-		DownloadingListFile.delete();
-	}
-
 	private void writeFailList() {
 		try {
-			File failListFile = new File(comicTitle + "/" + FAIL_LIST_FILE_NAME);
+			File failListFile = new File(comicName.get() + "/" + FAIL_LIST_FILE_NAME);
 			FileWriter fw = new FileWriter(failListFile);
 			for (String failURL : failList) {
 				fw.write(failURL + "\r\n");
@@ -185,5 +201,4 @@ public class ComicTracker implements Runnable {
 		}
 
 	}
-
 }

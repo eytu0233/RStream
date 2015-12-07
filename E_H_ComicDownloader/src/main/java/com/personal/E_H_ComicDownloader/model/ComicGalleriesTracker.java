@@ -15,7 +15,13 @@ import org.jsoup.select.Elements;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.personal.E_H_ComicDownloader.ComicDownloadTask;
 import com.personal.E_H_ComicDownloader.MainApp;
+
+import javafx.application.Platform;
+import javafx.collections.ObservableList;
+import javafx.scene.control.Label;
+import javafx.scene.control.ProgressBar;
 
 public class ComicGalleriesTracker implements Runnable {
 
@@ -23,13 +29,30 @@ public class ComicGalleriesTracker implements Runnable {
 
 	private String orignalGalleryURL;
 	private int trackerNum;
-	
+	private ProgressBar totalProgressBar;
+	private Label totalProgressBarPercentage;
+	private ObservableList<ComicDownloadTask> comicDownloadTasks;
+
 	private ExecutorService executor;
+
+	private double total = 0, downloaded = 0;
 
 	public ComicGalleriesTracker(String orignalGalleryURL, int trackerNum, ExecutorService executor) {
 		super();
 		this.orignalGalleryURL = orignalGalleryURL;
 		this.trackerNum = trackerNum;
+		this.executor = executor;
+	}
+
+	public ComicGalleriesTracker(String orignalGalleryURL, int trackerNum, ProgressBar totalProgressBar,
+			Label totalProgressBarPercentage, ObservableList<ComicDownloadTask> comicDownloadTasks,
+			ExecutorService executor) {
+		super();
+		this.orignalGalleryURL = orignalGalleryURL;
+		this.trackerNum = trackerNum;
+		this.totalProgressBar = totalProgressBar;
+		this.totalProgressBarPercentage = totalProgressBarPercentage;
+		this.comicDownloadTasks = comicDownloadTasks;
 		this.executor = executor;
 	}
 
@@ -96,10 +119,11 @@ public class ComicGalleriesTracker implements Runnable {
 				return;
 
 			for (int index = currentPageNum; index <= maxPageNum; index++) {
-				executor.submit(new ComicGallery(String.format(templateURL, index - 1).replace("\\u", "%"), "漢化", executor));
+				executor.submit(new ComicGallery(String.format(templateURL, index - 1).replace("\\u", "%"),
+						comicDownloadTasks, this, executor));
 			}
-			
-//			executor.shutdown();
+
+			// executor.shutdown();
 
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -109,6 +133,28 @@ public class ComicGalleriesTracker implements Runnable {
 			e.printStackTrace();
 		}
 
+	}
+
+	public synchronized void increaseTotal() {
+		total++;
+		updateTotalProgressBar();
+	}
+
+	public synchronized void increaseDownloaded() {
+		downloaded++;
+		updateTotalProgressBar();
+	}
+
+	public synchronized void updateTotalProgressBar() {
+		double percentage = downloaded / total;
+		System.out.println(percentage);
+		Platform.runLater(new Runnable() {
+			@Override
+			public void run() {
+				totalProgressBar.setProgress(percentage);
+				totalProgressBarPercentage.setText(String.format("%.1f%%", percentage));
+			}
+		});
 	}
 
 }

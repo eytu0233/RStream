@@ -7,9 +7,9 @@ import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public class HelloController
+public class RootLayoutController
 {
-    private static final Logger log = LoggerFactory.getLogger(HelloController.class);
+    private static final Logger log = LoggerFactory.getLogger(RootLayoutController.class);
 
     @FXML private TextField firstNameField;
     @FXML private TextField lastNameField;
