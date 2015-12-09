@@ -33,7 +33,7 @@ public class ImageDownloader implements Runnable {
 	}
 
 	public void run() {
-		// TODO Auto-generated method stub
+		// TODO Auto-generated method stub		
 		int tryTry = 3;
 		int timeout = 2000;
 

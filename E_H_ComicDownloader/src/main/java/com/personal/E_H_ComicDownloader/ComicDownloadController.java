@@ -67,7 +67,7 @@ public class ComicDownloadController {
 			
 			String dirPath = selectedDirectory.getAbsolutePath();
 			
-			executor.submit(new ComicGalleriesTracker(urlTextField.getText(), 1, totalProgressBar, totalProgressBarPercentage, mainApp.getComicDownloadTasks(), executor));
+			executor.submit(new ComicGalleriesTracker(urlTextField.getText(), 1, dirPath, totalProgressBar, totalProgressBarPercentage, mainApp.getComicDownloadTasks(), executor));
 		}
 	}
 

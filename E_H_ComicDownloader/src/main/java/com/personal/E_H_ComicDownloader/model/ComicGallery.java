@@ -21,6 +21,7 @@ public class ComicGallery implements Runnable {
 	private static final Logger log = LoggerFactory.getLogger(MainApp.class);
 
 	private String galleryURL;
+	private String dirPath;
 
 	private ObservableList<ComicDownloadTask> comicDownloadTasks;
 	
@@ -28,9 +29,10 @@ public class ComicGallery implements Runnable {
 	
 	private ExecutorService executor;
 	
-	public ComicGallery(String galleryURL, ObservableList<ComicDownloadTask> comicDownloadTasks, ComicGalleriesTracker comicGalleriesTracker, ExecutorService executor) {
+	public ComicGallery(String galleryURL, String dirPath, ObservableList<ComicDownloadTask> comicDownloadTasks, ComicGalleriesTracker comicGalleriesTracker, ExecutorService executor) {
 		super();
 		this.galleryURL = galleryURL;
+		this.dirPath = dirPath;
 		this.comicDownloadTasks = comicDownloadTasks;
 		this.comicGalleriesTracker = comicGalleriesTracker;
 		this.executor = executor;
@@ -43,7 +45,7 @@ public class ComicGallery implements Runnable {
 			Document doc = Jsoup.connect(galleryURL).get();
 			Elements divs = doc.select("div[class=it5]");
 			for(Element div : divs){
-				ComicDownloadTask comic = new ComicDownloadTask(div.select("a").attr("href"), div.select("a").text(), this);
+				ComicDownloadTask comic = new ComicDownloadTask(div.select("a").attr("href"), div.select("a").text(), dirPath, this);
 				Platform.runLater(()->comicDownloadTasks.add(comic));
 				executor.submit(comic);
 				comicGalleriesTracker.increaseTotal();

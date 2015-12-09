@@ -28,6 +28,7 @@ public class ComicGalleriesTracker implements Runnable {
 	private static final Logger log = LoggerFactory.getLogger(MainApp.class);
 
 	private String orignalGalleryURL;
+	private String dirPath;
 	private int trackerNum;
 	private ProgressBar totalProgressBar;
 	private Label totalProgressBarPercentage;
@@ -37,19 +38,13 @@ public class ComicGalleriesTracker implements Runnable {
 
 	private double total = 0, downloaded = 0;
 
-	public ComicGalleriesTracker(String orignalGalleryURL, int trackerNum, ExecutorService executor) {
-		super();
-		this.orignalGalleryURL = orignalGalleryURL;
-		this.trackerNum = trackerNum;
-		this.executor = executor;
-	}
-
-	public ComicGalleriesTracker(String orignalGalleryURL, int trackerNum, ProgressBar totalProgressBar,
+	public ComicGalleriesTracker(String orignalGalleryURL, int trackerNum, String dirPath, ProgressBar totalProgressBar,
 			Label totalProgressBarPercentage, ObservableList<ComicDownloadTask> comicDownloadTasks,
 			ExecutorService executor) {
 		super();
 		this.orignalGalleryURL = orignalGalleryURL;
 		this.trackerNum = trackerNum;
+		this.dirPath = dirPath;
 		this.totalProgressBar = totalProgressBar;
 		this.totalProgressBarPercentage = totalProgressBarPercentage;
 		this.comicDownloadTasks = comicDownloadTasks;
@@ -67,7 +62,7 @@ public class ComicGalleriesTracker implements Runnable {
 		String url1 = "http://g.e-hentai.org/?f_doujinshi=0&f_manga=1&f_artistcg=0&f_gamecg=0&f_western=0&f_non-h=0&f_imageset=0&f_cosplay=0&f_asianporn=0&f_misc=0&f_search=sea&f_apply=Apply+Filter";
 		String url2 = "http://g.e-hentai.org/?page=1&f_manga=on&f_search=%E6%BC%A2%E5%8C%96&f_apply=Apply+Filter";
 		String url3 = "http://g.e-hentai.org/manga/0";
-		executor.submit(new ComicGalleriesTracker(url2, 1, executor));
+//		executor.submit(new ComicGalleriesTracker(url2, 1, "", executor));
 		try {
 			executor.awaitTermination(1000, TimeUnit.MINUTES);
 		} catch (InterruptedException e) {
@@ -119,7 +114,7 @@ public class ComicGalleriesTracker implements Runnable {
 				return;
 
 			for (int index = currentPageNum; index <= maxPageNum; index++) {
-				executor.submit(new ComicGallery(String.format(templateURL, index - 1).replace("\\u", "%"),
+				executor.submit(new ComicGallery(String.format(templateURL, index - 1).replace("\\u", "%"), dirPath,
 						comicDownloadTasks, this, executor));
 			}
 
@@ -147,12 +142,11 @@ public class ComicGalleriesTracker implements Runnable {
 
 	public synchronized void updateTotalProgressBar() {
 		double percentage = downloaded / total;
-		System.out.println(percentage);
 		Platform.runLater(new Runnable() {
 			@Override
 			public void run() {
 				totalProgressBar.setProgress(percentage);
-				totalProgressBarPercentage.setText(String.format("%.1f%%", percentage));
+				totalProgressBarPercentage.setText(String.format("%.1f%%", percentage * 100));
 			}
 		});
 	}

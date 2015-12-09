@@ -26,49 +26,49 @@ import javafx.beans.property.StringProperty;
 import javafx.concurrent.Task;
 import javafx.scene.control.ProgressIndicator;
 
-public class ComicDownloadTask extends Task<Void>{
-	
+public class ComicDownloadTask extends Task<Void> {
+
 	private static final Logger log = LoggerFactory.getLogger(MainApp.class);
-	
+
 	private static final String FAIL_LIST_FILE_NAME = "failList.txt";
 
 	private static final int PAGE_IMAGE_MAX = 40;
-	
-	private static ExecutorService executor = Executors.newScheduledThreadPool(3, new ThreadFactory() {
+
+	private static ExecutorService executor = Executors.newScheduledThreadPool(5, new ThreadFactory() {
 		public Thread newThread(Runnable r) {
 			Thread t = new Thread(r);
 			t.setDaemon(true);
 			return t;
 		}
 	});
-	
+
 	private ComicGallery comicGallery;
 
 	private StringProperty comicName;
 	private StringProperty url;
 	
+	private String dirPath;
+
 	private int finish = 0;
 	private int imageNum;
-	
+
 	private LinkedList<String> imageURLs = new LinkedList<String>();
 	private LinkedList<String> failList = new LinkedList<String>();
 
-	
-	public ComicDownloadTask(String url, String comicName, ComicGallery comicGallery){
+	public ComicDownloadTask(String url, String comicName, String dirPath, ComicGallery comicGallery) {
 		this.comicName = new SimpleStringProperty(comicName);
+		this.dirPath = dirPath;
 		this.url = new SimpleStringProperty(url);
 		this.comicGallery = comicGallery;
-		
+
 		updateProgress(ProgressIndicator.INDETERMINATE_PROGRESS, 1);
 		updateMessage("等待排程");
 	}
-	
+
 	@Override
 	protected Void call() throws Exception {
 		// TODO Auto-generated method stub
-		
-		this.updateMessage("下載中");
-		
+
 		Pattern p = Pattern.compile("Showing (\\d+) - (\\d+) of (\\d+) images");
 		int currentPageNum = 1, maxPageNum = 1;
 		String templateURL = null;
@@ -106,11 +106,11 @@ public class ComicDownloadTask extends Task<Void>{
 			for (int index = currentPageNum; index <= maxPageNum; index++) {
 				comicPageScanner(String.format(templateURL, index - 1));
 			}
-			
+
 			for (String imageURL : imageURLs) {
-				File destination = new File(comicName.get() + "/" + String.format("%03d.jpg", ++imageNum));
+				File destination = new File(dirPath + "/" + comicName.get() + "/" + String.format("%03d.jpg", ++imageNum));
 				if (!destination.exists()) {
-					executor.submit(new ImageDownloader(url.get(), destination, this));
+					executor.submit(new ImageDownloader(imageURL, destination, this));
 				} else {
 					succeed();
 				}
@@ -123,7 +123,7 @@ public class ComicDownloadTask extends Task<Void>{
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		
+
 		return null;
 	}
 
@@ -140,7 +140,6 @@ public class ComicDownloadTask extends Task<Void>{
 			this.url = new SimpleStringProperty(this, "url");
 		return url;
 	}
-	
 
 	public synchronized void succeed() {
 		finish++;
@@ -154,12 +153,16 @@ public class ComicDownloadTask extends Task<Void>{
 	}
 
 	private synchronized void showProgress() {
+
 		log.debug(comicName.get() + " : " + (String.format("%.1f%%", (double) finish / imageNum * 100)));
-		Platform.runLater(()->updateProgress((double) finish / imageNum, 1));
+		Platform.runLater(() -> {
+			this.updateMessage("下載中");
+			updateProgress((double) finish / imageNum, 1);
+		});
 		if (finish == imageNum) {
 			log.debug(comicName.get() + " complete...");
 			comicGallery.finish();
-			Platform.runLater(()->this.updateMessage("下載完成"));
+			Platform.runLater(() -> this.updateMessage("下載完成"));
 			if (failList.size() > 0) {
 				log.debug(comicName.get() + " failList : " + failList.size());
 				writeFailList();
